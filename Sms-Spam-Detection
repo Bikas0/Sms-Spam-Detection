@@ -1,0 +1,80 @@
+import os
+import pandas as pd
+from google.colab import drive
+drive.mount('/content/drive')
+from sklearn.feature_extraction.text import CountVectorizer
+nltk.download('stopwords')
+
+!kaggle datasets download -d uciml/sms-spam-collection-dataset
+
+!unzip \*.zip && rm *.zip
+
+df = pd.read_csv("/content/drive/MyDrive/Kaggle/spam.csv", encoding='latin1')
+df.head()
+
+df['v1']
+
+df.isnull().sum()
+df.drop(['Unnamed: 2','Unnamed: 3','Unnamed: 4'], axis=1, inplace=True)
+
+import re
+import nltk
+from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer
+
+ps = PorterStemmer()
+corpus = []
+
+for i in range(0, len(df)):
+  review = re.sub('[^a-zA-Z]', " ", df['v2'][i])
+  
+  review = review.lower()
+  review = review.split()
+
+  review = [ps.stem(word) for word in review if not word in stopwords.words('english')]
+  review = " ".join(review)
+
+  corpus.append(review)
+
+
+corpus
+
+from sklearn.feature_extraction.text import CountVectorizer
+cv = CountVectorizer()
+x = cv.fit_transform(corpus).toarray()
+
+y = pd.get_dummies(df['v1'])
+y
+
+y = y.iloc[:,1].values
+y
+
+from sklearn.model_selection import train_test_split
+x_train,x_test,y_train, y_test = train_test_split(x,y, test_size = 0.3, random_state = 0)
+
+from sklearn.naive_bayes import MultinomialNB
+spam_message_detection = MultinomialNB()
+spam_message_detection.fit(x_train, y_train)
+
+y_pred = spam_message_detection.predict(x_test)
+
+from sklearn.metrics import confusion_matrix, accuracy_score
+confusion = confusion_matrix(y_test, y_pred)
+accuracy = accuracy_score(y_test, y_pred)
+
+print('Confusion : ',confusion)
+print('Accuracy : ', accuracy)
+
+
+import numpy as np
+my_data = "free entri wkli comp win fa cup final tkt st may text fa receiv entri question std txt rate c appli"
+my_data = np.array([my_data])
+my_data = cv.transform(my_data)
+output = spam_message_detection.predict(my_data)
+if (output == 0):
+  print("The message is not SPAM")
+
+else:
+    print("The message is SPAM")
+ 
+
